@@ -2,6 +2,8 @@
 
 > A collection of syntaxes and completions for [v](https://github.com/vlang/v)
 
+This package was forked from the [official Go package for Sublime](https://github.com/sublimehq/Packages/tree/93383eb0dfe8b7da56ab2ab27a406e86a2679c31/Go)
+
 ### Usage
 
 *With Git*
@@ -19,8 +21,13 @@
 ### TODOs
 
 - [x] comments
-- [x] tag completions
-- [x] filter completions
-- [x] `javascript`, `stylesheet`, `schema`, `raw` highlighting
-- [x] Variable Symbols
+- [x] keyword completions
+- [x] common snippets
+- [x] indent rules
+- [x] "const" Symbols
+- [x] "fn" Symbols
+- [x] "module" Symbols
+- [x] "struct" Symbols
+- [x] "type" Symbols
+- [x] "var" Symbols
 - [ ] publish on Package Control
