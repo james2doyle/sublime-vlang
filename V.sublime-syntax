@@ -1,0 +1,1067 @@
+%YAML 1.2
+---
+# http://www.sublimetext.com/docs/3/syntax.html
+# This file is forked from the Go syntax package from the default Sublime Text packages
+
+file_extensions:
+  - v
+  - vsh
+scope: source.v
+
+variables:
+  # These are the only words that can't be used as identifiers.
+  # https://vlang.io/docs#keywords
+  keyword: \b(?:break|const|continue|defer|else|enum|fn|for|go|goto|\$if|if|it|import|in|interface|match|module|mut|none|or|pub|return|struct|type)\b
+
+  # https://vlang.io/docs#btypes
+  predeclared_type: \b(?:bool|byte|byteptr|f32|f64|i128|i16|i64|i8|int|rune|string|u128|u16|u32|u64|voidptr)\b
+
+  predeclared_func: \b(?:error|eprintln|panic|print|println)\b
+
+  # Note: this matches ALL valid identifiers, including predeclared constants,
+  # functions and types.
+  ident: \b(?!{{keyword}})[[:alpha:]_][[:alnum:]_]*\b
+
+  # Single line only
+  inline_comment: /[*](?:[^*]|[*](?!/))*[*]/
+
+  # Whitespace and general comments on a single line.
+  # This should only be used for lookahead, not for capturing / scoping.
+  noise: (?:\s|{{inline_comment}})*
+
+  char_escape: \\x\h{2}|\\u\h{4}|\\U\h{8}|\\[0-7]{3}|\\.
+
+  dec_exponent: (?:[eE][-+]??{{dec_digits}})
+  hex_exponent: (?:[pP][-+]??{{dec_digits}})
+
+  # Matches a digit with any number of numeric separators, while
+  # not allowing a numeric separator as the last or first character.
+  dec_digits: (?:\d+(?:_\d+)*)
+
+  # Hexadecimal counterpart to dec_digits.
+  hex_digits: (?:_?\h+(?:_\h+)*)
+
+  # Octal counterpart to dec_digits.
+  oct_digits: (?:_?[0-7]+(?:_[0-7]+)*)
+
+  # Binary counterpart to dec_digits.
+  bin_digits: (?:_?[01]+(?:_[01]+)*)
+
+  # Matches a digit with any number of numeric separators, while
+  # not allowing a numeric separator as the last or first character.
+  ddigits: (?:\d+(?:_\d+)*)
+
+  # Hexadecimal counterpart to ddigits.
+  hdigits: _?(?:\h+(?:_\h+)*)
+
+  # Same as hdigits, except the leading hex character
+  # coefficient is optional in this case.
+  ohdigits: _?(?:\h*(?:_\h+)*)
+
+  # Octal counterpart to ddigits.
+  odigits: _?(?:[0-7]+(?:_[0-7]+)*)
+
+  # Binary counterpart to ddigits.
+  bdigits: _?(?:[01]+(?:_[01]+)*)
+
+contexts:
+  main:
+    - include: match-any
+
+  match-any:
+    - include: match-comments
+    - include: match-tokens
+
+  match-comments:
+    # Line comment
+    - match: //
+      scope: punctuation.definition.comment.v
+      push: pop-line-comment
+
+    # General comment
+    - match: /\*
+      scope: punctuation.definition.comment.begin.v
+      push:
+        - meta_scope: comment.block.v
+        - match: \*/
+          scope: punctuation.definition.comment.end.v
+          pop: true
+        - match: ^\s*(\*)(?!/)
+          captures:
+            1: punctuation.definition.comment.v
+
+  pop-line-comment:
+    - meta_scope: comment.line.v
+    # Including the newline allows the scope to visually stretch to the right,
+    # and ensures that functionality that relies on comment scoping, such as
+    # contextual hotkeys, works properly at EOL while typing a comment. This
+    # should also match \r\n due to Sublime's internal normalization.
+    - match: $\n?
+      pop: true
+
+  match-tokens:
+    - include: match-keywords
+    - include: match-identifiers
+    - include: match-literals
+    - include: match-operators
+    - include: match-punctuation
+
+  match-keywords:
+    - include: match-keyword-break
+    - include: match-keyword-compile-time-if
+    - include: match-keyword-const
+    - include: match-keyword-continue
+    - include: match-keyword-defer
+    - include: match-keyword-else
+    - include: match-keyword-enum
+    - include: match-keyword-for
+    - include: match-keyword-fn
+    - include: match-keyword-go
+    - include: match-keyword-goto
+    - include: match-keyword-if
+    - include: match-keyword-it
+    - include: match-keyword-import
+    - include: match-keyword-in
+    - include: match-keyword-interface
+    - include: match-keyword-none
+    - include: match-keyword-map
+    - include: match-keyword-match
+    - include: match-keyword-module
+    - include: match-keyword-or
+    - include: match-keyword-pub
+    - include: match-keyword-return
+    - include: match-keyword-struct
+    - include: match-keyword-type
+    - include: match-keyword-var
+
+  # See `match-selector` for field scoping.
+  match-identifiers:
+    - include: match-predeclared-constants
+    - include: match-call-or-cast
+    - include: match-short-variable-declarations
+    - match: \b_\b
+      scope: variable.language.blank.v
+    - match: '{{ident}}'
+      scope: variable.other.v
+
+  match-predeclared-constants:
+    - match: \b(?:true|false|none)\b
+      scope: constant.language.v
+
+  match-call-or-cast:
+    - match: \b(?:mut)\b(?=(?:{{noise}}\))*{{noise}}\()
+      scope: variable.function.v support.function.builtin.v
+      push: pop-arguments-starting-with-type
+    - match: '{{predeclared_type}}(?=(?:{{noise}}\))*{{noise}}\()'
+      scope: variable.function.v support.type.builtin.v
+    - match: '{{predeclared_func}}(?=(?:{{noise}}\))*{{noise}}\()'
+      scope: variable.function.v support.function.builtin.v
+    - match: '{{ident}}(?=(?:{{noise}}\))*{{noise}}\()'
+      scope: variable.function.v
+
+  # See notes on `match-call-or-cast`.
+  pop-call-or-cast:
+    - match: \b(?:mut)\b(?=(?:{{noise}}\))*{{noise}}\()
+      scope: variable.function.v support.function.builtin.v
+      set: pop-arguments-starting-with-type
+    - match: '{{predeclared_type}}(?=(?:{{noise}}\))*{{noise}}\()'
+      scope: variable.function.v support.type.builtin.v
+      pop: true
+    - match: '{{predeclared_func}}(?=(?:{{noise}}\))*{{noise}}\()'
+      scope: variable.function.v support.function.builtin.v
+      pop: true
+    - match: '{{ident}}(?=(?:{{noise}}\))*{{noise}}\()'
+      scope: variable.function.v
+      pop: true
+
+  # Note: this currently doesn't work across multiple lines.
+  match-short-variable-declarations:
+    - match: (?={{ident}}(?:{{noise}},{{noise}}{{ident}})*{{noise}}:=)
+      push:
+        - include: match-comments
+        - match: \b_\b
+          scope: variable.language.blank.v
+        - match: '{{ident}}'
+          scope: variable.declaration.v
+        - include: match-comma
+        - include: pop-before-nonblank
+
+  # https://vlang.io/docs#operators
+  match-operators: [
+    {match: \!=  , scope: keyword.operator.v},
+    {match: \!   , scope: keyword.operator.v},
+    {match: \%=  , scope: keyword.operator.assignment.v},
+    {match: \%   , scope: keyword.operator.v},
+    {match: \&&  , scope: keyword.operator.v},
+    {match: \&=  , scope: keyword.operator.assignment.v},
+    {match: \&^  , scope: keyword.operator.v},
+    {match: \&   , scope: keyword.operator.v},
+    {match: \*=  , scope: keyword.operator.assignment.v},
+    {match: \*   , scope: keyword.operator.v},
+    {match: \+\+ , scope: keyword.operator.v},
+    {match: \+=  , scope: keyword.operator.assignment.v},
+    {match: \+   , scope: keyword.operator.v},
+    {match: --   , scope: keyword.operator.assignment.v},
+    {match: -=   , scope: keyword.operator.assignment.v},
+    {match: \-   , scope: keyword.operator.v},
+    {match: /=   , scope: keyword.operator.assignment.v},
+    {match: /    , scope: keyword.operator.v},
+    {match: :=   , scope: keyword.operator.assignment.v},
+    {match: <    , scope: keyword.operator.v},
+    {match: <<=  , scope: keyword.operator.assignment.v},
+    {match: \<<  , scope: keyword.operator.v},
+    {match: <=   , scope: keyword.operator.v},
+    {match: ==   , scope: keyword.operator.v},
+    {match: \=   , scope: keyword.operator.assignment.v},
+    {match: \>=  , scope: keyword.operator.assignment.v},
+    {match: \>>  , scope: keyword.operator.v},
+    {match: \>   , scope: keyword.operator.v},
+    {match: \^=  , scope: keyword.operator.assignment.v},
+    {match: \^   , scope: keyword.operator.v},
+    {match: \|=  , scope: keyword.operator.assignment.v},
+    {match: \|\| , scope: keyword.operator.v},
+    {match: \|   , scope: keyword.operator.v},
+  ]
+
+  match-star:
+    - match: \*
+      scope: keyword.operator.v
+
+  match-punctuation:
+    - include: match-comma
+    - include: match-ellipsis
+    - include: match-colon
+    - include: match-semicolon
+    - include: match-selector
+    - include: match-parens
+    - include: match-brackets
+    - include: match-braces
+
+  match-comma:
+    - match: \,
+      scope: punctuation.separator.v
+
+  match-ellipsis:
+    - match: \.\.
+      scope: keyword.operator.variadic.v
+
+  match-colon:
+    - match: ':'
+      scope: punctuation.separator.v
+
+  match-semicolon:
+    - match: ;
+      scope: punctuation.terminator.v
+
+  match-question:
+    - match: \?
+      scope: keyword.operator.optional.v
+
+  match-selector:
+    - match: \.
+      scope: punctuation.accessor.dot.v
+      push:
+        - include: match-comments
+        - include: pop-type-assertion
+
+        # Note: calls and casts are syntactically identical.
+        - match: '{{ident}}(?=(?:{{noise}}\))*{{noise}}\()'
+          scope: variable.function.v
+          pop: true
+
+        # Note: newlines between dot and assertion/field are ok
+        - include: pop-before-nonblank
+
+  match-parens:
+    - match: \(
+      scope: punctuation.section.parens.begin.v
+      push:
+        - match: \)
+          scope: punctuation.section.parens.end.v
+          pop: true
+        - include: pop-call-or-cast
+        - include: match-any
+    - match: \)
+      scope: punctuation.section.parens.end.v
+
+  match-brackets:
+    - match: \[
+      scope: punctuation.section.brackets.begin.v
+    - match: \]
+      scope: punctuation.section.brackets.end.v
+      push:
+        - include: pop-on-terminator
+        - include: match-comments
+        - include: match-star
+        - match: '{{ident}}(?={{noise}}\.)'
+          scope: variable.other.v
+        - match: \b_\b
+          scope: variable.language.blank.v
+          pop: true
+        - include: pop-type-identifier
+        - include: pop-before-nonblank
+
+  match-braces:
+    - match: \{
+      scope: punctuation.section.braces.begin.v
+      push:
+        - meta_scope: meta.block.v
+        - match: \}
+          scope: punctuation.section.braces.end.v
+          pop: true
+        - include: match-any
+    - match: \}
+      scope: punctuation.section.braces.end.v
+
+  match-literals:
+    - include: match-imaginary
+    - include: match-floats
+    - include: match-integers
+    - include: match-strings
+
+  match-imaginary:
+    # Decimal imaginary numbers
+    - match: '{{dec_digits}}(?:(\.){{dec_digits}}?)?{{dec_exponent}}?(i)'
+      scope: constant.numeric.imaginary.decimal.v
+      captures:
+        1: punctuation.separator.decimal.v
+        2: storage.type.numeric.v
+    # Hexadecimal imaginary numbers
+    - match: (0[xX]){{hex_digits}}?(?:(\.){{hex_digits}}?)?{{hex_exponent}}?(i)
+      scope: constant.numeric.imaginary.hexadecimal.v
+      captures:
+        1: punctuation.definition.numeric.base.v
+        2: punctuation.separator.decimal.v
+        3: storage.type.numeric.v
+    # Octal imaginary numbers
+    - match: (0[oO]){{oct_digits}}(i)
+      scope: constant.numeric.imaginary.octal.v
+      captures:
+        1: punctuation.definition.numeric.base.v
+        2: storage.type.numeric.v
+    # Binary imaginary numbers
+    - match: (0[bB]){{bin_digits}}(i)
+      scope: constant.numeric.imaginary.binary.v
+      captures:
+        1: punctuation.definition.numeric.base.v
+        2: storage.type.numeric.v
+
+  match-floats:
+    # Decimal float literal
+    - match: |-
+        (?x:
+         {{dec_digits}}(?:(\.){{dec_digits}}?{{dec_exponent}}?|{{dec_exponent}})
+         | (\.){{dec_digits}}{{dec_exponent}}?
+        )
+      scope: constant.numeric.float.decimal.v
+      captures:
+        1: punctuation.separator.decimal.v
+        2: punctuation.separator.decimal.v
+    # Hexadecimal float literal
+    - match: (0[xX]){{hex_digits}}?(?:(\.){{hex_digits}}?)?{{hex_exponent}}
+      scope: constant.numeric.float.hexadecimal.v
+      captures:
+        1: punctuation.definition.numeric.base.v
+        2: punctuation.separator.decimal.v
+
+  match-integers:
+    - include: match-octal-integer
+    - include: match-hex-integer
+    - include: match-binary-integer
+    - include: match-decimal-integer
+
+  match-octal-integer:
+    - match: (0){{oct_digits}}(?=\D)
+      scope: constant.numeric.integer.octal.v
+      captures:
+        1: punctuation.definition.numeric.base.v
+    - match: 0[0-7]*[8-9]+
+      scope: invalid.illegal.v
+    - match: (0[oO]){{oct_digits}}
+      scope: constant.numeric.integer.octal.v
+      captures:
+        1: punctuation.definition.numeric.base.v
+
+  match-hex-integer:
+    - match: (0[xX]){{hex_digits}}
+      scope: constant.numeric.integer.hexadecimal.v
+      captures:
+        1: punctuation.definition.numeric.base.v
+
+  match-binary-integer:
+    - match: (0[bB]){{bin_digits}}
+      scope: constant.numeric.integer.binary.v
+      captures:
+        1: punctuation.definition.numeric.base.v
+
+  match-decimal-integer:
+    - match: '{{dec_digits}}'
+      scope: constant.numeric.integer.decimal.v
+
+  match-strings:
+    - include: match-raw-string
+    - include: match-interpreted-string
+
+  match-raw-string:
+    - match: '"'
+      scope: punctuation.definition.string.begin.v
+      push:
+        - meta_scope: string.quoted.other.v
+        - match: '"'
+          scope: punctuation.definition.string.end.v
+          pop: true
+        - include: match-template-string
+        - match: \$\w+
+          scope: constant.character.escape.v
+
+  match-interpreted-string:
+    - match: "'"
+      scope: punctuation.definition.string.begin.v
+      push:
+        - meta_scope: string.quoted.double.v
+        - match: "'"
+          scope: punctuation.definition.string.end.v
+          pop: true
+        - include: match-template-string
+        - match: '{{char_escape}}'
+          scope: constant.character.escape.v
+        - match: \$\w+
+          scope: constant.character.escape.v
+
+  match-template-string:
+   - match: '\${(?=.*)}'
+     scope: punctuation.section.interpolation.begin.v
+     push:
+       - meta_scope: meta.interpolation.v
+       - clear_scopes: 1
+       - match: "}"
+         scope: punctuation.section.interpolation.end.v
+         pop: true
+       - match: ":=|="
+         scope: keyword.operator.assignment.v
+       - match: '(\.)([\w]+)'
+         captures:
+           1: punctuation.accessor.dot.v
+           2: variable.other.member.v
+       - match: '(\$)[\w]+'
+         scope: variable.other.template.v
+         captures:
+           1: punctuation.definition.variable.v
+       - match: '[.$]'
+         scope: variable.other.template.v
+       - match: \b(\$if|if|in|else|or)\b
+         scope: keyword.control.v
+       - match: \b(filter|len|map|repeat|to_upper|str|delete)\b
+         scope: variable.function.v support.function.builtin.v
+       - include: match-comments
+       - include: match-strings
+
+  match-keyword-break:
+    - match: \bbreak\b
+      scope: keyword.control.v
+
+  match-keyword-const:
+    - match: \bconst\b
+      scope: storage.type.keyword.const.v
+      push:
+        - match: \(
+          scope: punctuation.section.parens.begin.v
+          set:
+            - match: \)
+              scope: punctuation.section.parens.end.v
+              pop: true
+
+            - match: \b_\b(?={{noise}},)
+              scope: variable.language.blank.v
+            - match: '{{ident}}(?={{noise}},)'
+              scope: variable.other.constant.declaration.v
+
+            - match: \b_\b
+              scope: variable.language.blank.v
+              push: pop-const-type-and-or-assignment
+            - match: '{{ident}}'
+              scope: variable.other.constant.declaration.v
+              push: pop-const-type-and-or-assignment
+
+            - include: match-any
+
+        - include: match-comments
+        - include: match-comma
+
+        - match: \b_\b(?={{noise}},)
+          scope: variable.language.blank.v
+        - match: '{{ident}}(?={{noise}},)'
+          scope: variable.other.constant.declaration.v
+
+        - match: \b_\b
+          scope: variable.language.blank.v
+          set: pop-const-type-and-or-assignment
+        - match: '{{ident}}'
+          scope: variable.other.constant.declaration.v
+          set: pop-const-type-and-or-assignment
+
+        - include: pop-before-nonblank
+
+  match-keyword-continue:
+    - match: \bcontinue\b
+      scope: keyword.control.v
+
+  match-keyword-defer:
+    - match: \bdefer\b
+      scope: keyword.control.v
+
+  match-keyword-else:
+    - match: \belse\b
+      scope: keyword.control.v
+
+  match-keyword-enum:
+    - match: \benum\b
+      scope: keyword.control.v
+
+  match-keyword-for:
+    - match: \bfor\b
+      scope: keyword.control.v
+
+  match-keyword-fn:
+    - match: \bfn\b
+      scope: storage.type.keyword.function.v
+      push:
+        - include: match-comments
+
+        # Method
+        - match: (?=\({{noise}}[^)]+{{noise}}\){{noise}}{{ident}}{{noise}}\()
+          set:
+            - meta_scope: meta.function.declaration.v
+            - match: (?=[^(])
+              set:
+                - meta_scope: meta.function.declaration.v
+                - include: pop-fn-signature
+            # Receiver list
+            - match: (?=\()
+              push: pop-fn-parameter-list
+
+        # Named function
+        - match: (?={{ident}}{{noise}}\()
+          set: pop-fn-signature
+
+        # Anonymous function
+        - include: pop-fn-parameter-and-return-lists
+
+  match-keyword-go:
+    - match: \bgo\b
+      scope: keyword.control.v
+
+  match-keyword-goto:
+    - match: \bgoto\b
+      scope: keyword.control.v
+
+  match-keyword-if:
+    - match: \bif\b
+      scope: keyword.control.v
+
+  match-keyword-it:
+    - match: \bit\b
+      scope: keyword.control.v
+
+  match-keyword-compile-time-if:
+    - match: \b\$if\b
+      scope: keyword.control.v
+
+  match-keyword-in:
+    - match: \bin\b
+      scope: keyword.other.in.v
+
+  match-keyword-import:
+    - match: \bimport\b
+      scope: keyword.other.import.v
+
+  match-keyword-interface:
+    - match: (?=\binterface\b)
+      scope: storage.type.keyword.interface.v
+      push: pop-interface
+
+  match-keyword-none:
+    - match: \bnone\b
+      scope: keyword.control.v
+
+  match-keyword-map:
+    - match: (?=\bmap\b)
+      push: pop-map
+
+  match-keyword-match:
+    - match: \bmatch\b
+      scope: keyword.control.v
+
+  match-keyword-module:
+    - match: \bmodule\b
+      scope: keyword.control.v
+
+  match-keyword-pub:
+    - match: \bpub\b
+      scope: keyword.control.v
+
+  match-keyword-or:
+    - match: \bor\b
+      scope: keyword.control.v
+
+  match-keyword-return:
+    - match: \breturn\b
+      scope: keyword.control.v
+
+  match-keyword-struct:
+    - match: (?=\bstruct\b)
+      push: pop-struct
+
+  match-keyword-type:
+    - match: \btype\b
+      scope: storage.type.keyword.type.v
+      push:
+        - include: match-comments
+
+        - match: \(
+          scope: punctuation.section.parens.begin.v
+          set:
+            - match: \)
+              scope: punctuation.section.parens.end.v
+              pop: true
+            - match: \b_\b
+              scope: variable.language.blank.v
+              push:
+                - match: (?=\))
+                  pop: true
+                - include: pop-type-alias-or-typedef
+            - match: '{{ident}}'
+              scope: entity.name.type.v
+              push:
+                - match: (?=\))
+                  pop: true
+                - include: pop-type-alias-or-typedef
+            - include: match-any
+
+        - match: \b_\b
+          scope: variable.language.blank.v
+          set: pop-type-alias-or-typedef
+        - match: '{{ident}}'
+          scope: entity.name.type.v
+          set: pop-type-alias-or-typedef
+
+        - include: pop-before-nonblank
+
+  match-keyword-var:
+    - match: \bmut\b
+      scope: storage.type.keyword.var.v
+      push:
+        - match: \(
+          scope: punctuation.section.parens.begin.v
+          set:
+            - match: \)
+              scope: punctuation.section.parens.end.v
+              pop: true
+
+            - match: \b_\b(?={{noise}},)
+              scope: variable.language.blank.v
+            - match: '{{ident}}(?={{noise}},)'
+              scope: variable.declaration.v
+
+            - match: \b_\b
+              scope: variable.language.blank.v
+              push: pop-var-type-and-or-assignment
+            - match: '{{ident}}'
+              scope: variable.declaration.v
+              push: pop-var-type-and-or-assignment
+
+            - include: match-any
+
+        - include: match-comments
+        - include: match-comma
+
+        - match: \b_\b(?={{noise}},)
+          scope: variable.language.blank.v
+        - match: '{{ident}}(?={{noise}},)'
+          scope: variable.declaration.v
+
+        - match: \b_\b
+          scope: variable.language.blank.v
+          set: pop-var-type-and-or-assignment
+        - match: '{{ident}}'
+          scope: variable.declaration.v
+          set: pop-var-type-and-or-assignment
+
+        - include: pop-before-nonblank
+
+  pop-fn-signature:
+    - include: match-comments
+    - match: \b_\b
+      scope: variable.language.blank.v
+      set: pop-fn-parameter-and-return-lists
+    - match: '{{ident}}'
+      scope: entity.name.function.v
+      set: pop-fn-parameter-and-return-lists
+    - include: pop-before-nonblank
+
+  # https://golang.org/ref/spec#Function_types
+  #
+  # Go has two parameter syntaxes: unnamed and named.
+  #
+  # Unnamed:
+  #
+  #   (int)
+  #   (int, int)
+  #   (int, int, ...int)
+  #
+  # Named:
+  #
+  #   (a int)
+  #   (a, b int)
+  #   (a, b ...int)
+  #   (a int, b int)
+  #   (a, b int, c ...int)
+  #
+  # The modes are distinct: either all named, or all unnamed.
+  #
+  # Gotchas:
+  #
+  #   parameters can span multiple lines
+  #   a type can span multiple lines (anonymous struct, interface, etc.)
+  #   parameter groups AND parameter names are comma-separated
+  #   `chan type` is a type that looks like an identifier followed by a type
+  #
+  # I have an impression that with the current syntax engine, it's impossible to
+  # perfectly parse some parameter lists, particularly ones that are named,
+  # multiline, and have name groups. We're still trying to cover as many edge
+  # cases as possible.
+  pop-fn-parameter-and-return-lists:
+    - include: match-comments
+    - match: (?=\()
+      set: [pop-fn-return-signature, pop-fn-parameter-list]
+    - include: pop-before-nonblank
+
+  pop-fn-return-signature:
+    - include: pop-on-terminator
+    - include: match-comments
+    - match: (?=\()
+      set: pop-fn-parameter-list
+    - match: (?=\S)
+      set: pop-type
+
+  pop-fn-parameter-list:
+    - include: match-comments
+    - match: \(
+      scope: punctuation.section.parens.begin.v
+      set:
+        - include: match-comments
+        - match: |
+            (?x)
+            (?=
+              (?:{{noise}}{{ident}}{{noise}},{{noise}})*
+              {{ident}}{{noise}}(?:\.\.\.|[^\s/,).])
+            )
+          set: pop-parameter-list-named
+        - match: (?=\S)
+          set: pop-parameter-list-unnamed
+    - include: pop-before-nonblank
+
+  pop-parameter-list-named:
+    - match: \)
+      scope: punctuation.section.parens.end.v
+      pop: true
+    - include: match-comments
+    - include: match-keywords
+    - include: match-comma
+    - include: match-ellipsis
+    - match: \b_\b
+      scope: variable.language.blank.v
+      push: pop-parameter-type
+    - match: '{{ident}}'
+      scope: variable.parameter.v
+      push: pop-parameter-type
+
+  pop-parameter-type:
+    - match: (?=\)|,)
+      pop: true
+    - include: match-ellipsis
+    - include: pop-type
+
+  pop-parameter-list-unnamed:
+    - match: \)
+      scope: punctuation.section.parens.end.v
+      pop: true
+    - include: match-comments
+    - include: match-keywords
+    - include: match-comma
+    - include: match-ellipsis
+    - match: (?=\S)
+      push: pop-type
+
+  pop-before-nonblank:
+    - match: (?=\S)
+      pop: true
+
+  pop-on-semicolon:
+    - match: ;
+      scope: punctuation.terminator.v
+      pop: true
+
+  pop-on-terminator:
+    - include: pop-on-semicolon
+    - match: $
+      pop: true
+
+  pop-type:
+    - include: pop-on-semicolon
+    - include: match-comments
+
+    # Note: Go allows wrapping types in an arbitrary number of parens.
+    - match: \(
+      scope: punctuation.section.parens.begin.v
+      push: [pop-type-nested-in-parens, pop-type]
+
+    - match: \[
+      scope: punctuation.section.brackets.begin.v
+      set:
+        - match: \]
+          scope: punctuation.section.brackets.end.v
+          # BUG:
+          #   _ = blah[0] * blah
+          # This currently parses as an array type of `[0]*blah`.
+          # Can we fix this false positive?
+          set: pop-type
+        - include: match-any
+
+    - include: match-operators
+
+    - match: (?=\binterface\b)
+      set: pop-interface
+    - match: (?=\bmap\b)
+      set: pop-map
+    - match: (?=\bstruct\b)
+      set: pop-struct
+    - match: \bfn\b
+      scope: storage.type.keyword.function.v
+      set: pop-fn-parameter-and-return-lists
+    - match: (?={{ident}})
+      set: pop-named-type
+
+    - include: pop-before-nonblank
+
+  pop-type-nested-in-parens:
+    - match: \)
+      scope: punctuation.section.parens.end.v
+      pop: true
+    - include: pop-type
+
+  pop-struct:
+    - match: \bstruct\b
+      scope: storage.type.keyword.struct.v
+      set:
+        - include: match-comments
+        - match: \{
+          scope: punctuation.section.braces.begin.v
+          set:
+            - meta_scope: meta.type.v
+
+            - match: \}
+              scope: punctuation.section.braces.end.v
+              pop: true
+
+            - include: match-keywords
+            - include: match-star
+
+            - match: '{{ident}}(?={{noise}}\.)'
+              scope: variable.other.v
+            - match: \.
+              scope: punctuation.accessor.dot.v
+            - match: '{{predeclared_type}}(?={{noise}}(?:"|`|//|;|\}|$))'
+              scope: entity.other.inherited-class.v support.type.builtin.v
+            - match: '{{ident}}(?={{noise}}(?:"|`|//|;|\}|$))'
+              scope: entity.other.inherited-class.v
+
+            - match: \b_\b
+              scope: variable.language.blank.v
+            - match: '{{ident}}'
+              scope: variable.other.member.declaration.v
+              push:
+                - match: (?=\})
+                  pop: true
+                - include: pop-on-terminator
+                - include: match-comments
+                - include: pop-type
+                - include: match-any
+
+            - include: match-any
+
+        - include: pop-before-nonblank
+
+  pop-interface:
+    - match: \binterface\b
+      scope: storage.type.keyword.interface.v
+      set:
+        - include: match-comments
+        - match: \{
+          scope: punctuation.section.braces.begin.v
+          set:
+            - meta_scope: meta.type.v
+            - match: \}
+              scope: punctuation.section.braces.end.v
+              pop: true
+
+            - include: match-keywords
+            - include: match-star
+
+            - match: '{{ident}}(?={{noise}}\.)'
+              scope: variable.other.v
+            - match: \.
+              scope: punctuation.accessor.dot.v
+            - match: '{{predeclared_type}}(?={{noise}}(?://|;|\}|$))'
+              scope: entity.other.inherited-class.v support.type.builtin.v
+            - match: '{{ident}}(?={{noise}}(?://|;|\}|$))'
+              scope: entity.other.inherited-class.v
+
+            - match: '{{ident}}(?={{noise}}\()'
+              scope: entity.name.function.v
+              push:
+                - match: (?=\})
+                  pop: true
+                - include: pop-fn-parameter-and-return-lists
+
+            - include: match-any
+        - include: pop-before-nonblank
+
+  pop-map:
+    # Note: newlines between `map` and `[` are ok, but newlines after `]`
+    # terminate the type.
+    - match: \bmap\b
+      scope: storage.type.keyword.map.v
+      set:
+        - include: match-comments
+        - include: pop-on-semicolon
+        - match: \[
+          scope: punctuation.section.brackets.begin.v
+          set:
+            - match: \]
+              scope: punctuation.section.brackets.end.v
+              set:
+                - include: pop-on-terminator
+                - include: pop-type
+            - include: match-comments
+            - match: (?=\S)
+              push:
+                - match: (?=\])
+                  pop: true
+                - include: pop-type
+        - include: pop-type
+
+  pop-named-type:
+    - include: match-comments
+    - match: \b_\b
+      scope: variable.language.blank.v
+      pop: true
+    - match: '{{ident}}(?={{noise}}\.)'
+      scope: variable.other.v
+    - match: \.
+      scope: punctuation.accessor.dot.v
+    - match: \b_\b
+      scope: variable.language.blank.v
+      pop: true
+    - include: pop-type-identifier
+    - include: pop-before-nonblank
+
+  pop-type-identifier:
+    - match: '{{predeclared_type}}'
+      scope: storage.type.v support.type.builtin.v
+      pop: true
+
+  pop-type-alias-or-typedef:
+    - include: pop-on-terminator
+    - include: match-comments
+    # Newlines after `=` are ok.
+    - match: =
+      scope: keyword.operator.assignment.v
+      set: pop-type
+    - match: (?=\S)
+      set: pop-type
+
+  pop-const-type-and-or-assignment:
+    - include: pop-on-terminator
+    - include: match-comments
+    - match: =
+      scope: keyword.operator.assignment.v
+      set: pop-const-expressions
+    - match: (?=\S)
+      set: [pop-const-assignment-or-terminate, pop-type]
+
+  pop-const-assignment-or-terminate:
+    - include: pop-on-terminator
+    - include: match-comments
+    - match: =
+      scope: keyword.operator.assignment.v
+      set: pop-const-expressions
+    - include: pop-before-nonblank
+
+  # Note: this doesn't support multiline expressions.
+  #
+  # Note on `iota`. See https://golang.org/ref/spec#Iota. `iota` is a regular
+  # identifier that happens to be predeclared in constant initialization
+  # expressions, but not anywhere else. Just like `true|false|nil`, you can
+  # redefine it. Doing so in the root scope makes the magic constant unavailable
+  # for the entire package.
+  pop-const-expressions:
+    - include: pop-on-semicolon
+    - include: match-comments
+    - match: (?=\S)
+      set:
+        - include: pop-on-terminator
+        - match: \biota\b
+          scope: constant.numeric.integer.decimal.v
+        - include: match-any
+
+  pop-var-type-and-or-assignment:
+    - include: pop-on-terminator
+    - include: match-comments
+    - match: =
+      scope: keyword.operator.assignment.v
+      set: pop-var-expressions
+    - match: (?=\S)
+      set: [pop-var-assignment-or-terminate, pop-type]
+
+  pop-var-assignment-or-terminate:
+    - include: pop-on-terminator
+    - include: match-comments
+    - match: =
+      scope: keyword.operator.assignment.v
+      set: pop-var-expressions
+    - include: pop-before-nonblank
+
+  # Note: this doesn't support multiline expressions.
+  pop-var-expressions:
+    - include: pop-on-semicolon
+    - include: match-comments
+    - match: (?=\S)
+      set:
+        - include: pop-on-terminator
+        - include: match-any
+
+  pop-type-assertion:
+    - match: \(
+      scope: punctuation.section.parens.begin.v
+      set:
+        - match: \)
+          scope: punctuation.section.parens.end.v
+          pop: true
+        - include: pop-type
+
+  pop-arguments-starting-with-type:
+    - include: match-comments
+    - match: \)
+      scope: punctuation.section.parens.end.v
+    - match: \(
+      scope: punctuation.section.parens.begin.v
+      set:
+        - match: \)
+          scope: punctuation.section.parens.end.v
+          pop: true
+        - include: match-comments
+        - match: (?=\S)
+          set: pop-type
+    - include: pop-on-terminator
+    - include: pop-before-nonblank

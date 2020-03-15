@@ -1,0 +1,8 @@
+<snippet>
+	<content><![CDATA[if ${1:a} ${2:< ${3:b}} {
+  ${4:println('\$a < \$b')}$0
+}]]></content>
+	<tabTrigger>if</tabTrigger>
+	<scope>source.v</scope>
+	<description>if {}</description>
+</snippet>
